@@ -1,18 +1,23 @@
 package com.demo.configuration
 
+import com.demo.common.RestResponse
+import io.ktor.application.ApplicationCall
 import io.ktor.application.call
 import io.ktor.application.install
 import io.ktor.features.ContentNegotiation
 import io.ktor.features.StatusPages
-import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.jackson.jackson
 import io.ktor.response.respond
-import io.ktor.response.respondText
+import io.ktor.response.respondRedirect
 import io.ktor.routing.*
+import io.ktor.server.cio.CIO
 import io.ktor.server.engine.ApplicationEngine
+import io.ktor.server.engine.EngineAPI
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
+import io.ktor.util.KtorExperimentalAPI
+import io.ktor.util.pipeline.PipelineContext
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.ApplicationContext
@@ -20,9 +25,12 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.LocalVariableTableParameterNameDiscoverer
 import org.springframework.stereotype.Controller
+import org.springframework.util.Assert
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestMethod
 import org.springframework.web.bind.annotation.RequestMethod.*
+import org.springframework.web.bind.annotation.ResponseBody
+import org.springframework.web.bind.annotation.RestController
 import java.lang.reflect.Method
 import java.util.*
 import javax.annotation.Resource
@@ -41,10 +49,16 @@ open class KtorAutoConfiguration() {
     @Resource
     private lateinit var properties: KtorProperties
 
-
+    @EngineAPI
+    @KtorExperimentalAPI
     @Bean
     open fun applicationEngine(context: ApplicationContext): ApplicationEngine {
-        return embeddedServer(Netty, properties.port, properties.host) {
+        val engineFactory = when (properties.engine) {
+            "CIO" -> CIO
+            else -> Netty
+        }
+
+        return embeddedServer(engineFactory, properties.port, properties.host) {
             install(ContentNegotiation) {
                 jackson { }
             }
@@ -71,8 +85,8 @@ open class KtorAutoConfiguration() {
                 }
                 install(StatusPages) {
                     exception<Throwable> { e ->
-                        call.respondText(e.localizedMessage
-                                ?: "未知错误", ContentType.Application.Json, HttpStatusCode.InternalServerError)
+                        call.respond(HttpStatusCode.InternalServerError, RestResponse.error<String>(e.localizedMessage
+                                ?: "Unknown Exception"))
                     }
                 }
                 route("/") {
@@ -92,7 +106,6 @@ open class KtorAutoConfiguration() {
         if (definition.methods.isEmpty()) {
             definition.methods = values()
         }
-
         definition.methods.forEach { requestMethod ->
             definition.uri.forEach { uri ->
                 when (requestMethod) {
@@ -104,11 +117,13 @@ open class KtorAutoConfiguration() {
                                 params[it]
                             }?.toTypedArray()!!
                             val message = method.invokeSuspend(bean, param)
-                            message?.let { call.respond(message) }
+                            handleView(message, definition)
                         }
                     }
                     POST -> {
                         post(uri) {
+                            val param = arrayOf("1")
+                            val message = method.invokeSuspend(bean, param)
                         }
                     }
 //                HEAD -> TODO()
@@ -125,11 +140,26 @@ open class KtorAutoConfiguration() {
     }
 }
 
+suspend fun PipelineContext<Unit, ApplicationCall>.handleView(result: Any?, definition: RouteDefinition) {
+    if (result == null || result == Unit)
+        call.respond("")
+    else {
+        if (definition.bean.javaClass.getAnnotation(ResponseBody::class.java) != null || definition.bean.javaClass.getAnnotation(RestController::class.java) != null || definition.method.getAnnotation(ResponseBody::class.java) != null)
+            call.respond(result)
+        Assert.isTrue(result is String, "unable to handle result (${result.javaClass.typeName}) without responseBody")
+        val resultStr = result as String
+        if (resultStr.startsWith("redirect:"))
+            call.respondRedirect(resultStr.removePrefix("redirect:"), true)
+    }
+}
+
+
 @ConfigurationProperties(prefix = "spring.ktor")
 open class KtorProperties {
     open var host: String = "0.0.0.0"
     open var port: Int = 8088
     open var enableTrace = false
+    open var engine = "Netty"
 }
 
 
