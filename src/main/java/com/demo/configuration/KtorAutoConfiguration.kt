@@ -1,5 +1,6 @@
 package com.demo.configuration
 
+import com.demo.Application
 import com.demo.common.RestResponse
 import freemarker.cache.ClassTemplateLoader
 import io.ktor.application.ApplicationCall
@@ -30,7 +31,9 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.LocalVariableTableParameterNameDiscoverer
 import org.springframework.stereotype.Controller
+import org.springframework.ui.Model
 import org.springframework.util.Assert
+import org.springframework.validation.support.BindingAwareConcurrentModel
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestMethod
 import org.springframework.web.bind.annotation.RequestMethod.*
@@ -69,7 +72,7 @@ open class KtorAutoConfiguration {
             }
             if (Class.forName("io.ktor.freemarker.FreeMarker") != null)
                 install(FreeMarker) {
-                    templateLoader = ClassTemplateLoader(this::class.java, properties.templatesRoot)
+                    templateLoader = ClassTemplateLoader(Application::class.java, "/${properties.templatesRoot}")
                 }
 
             val beans = context.getBeansWithAnnotation(Controller::class.java).values
@@ -129,8 +132,9 @@ open class KtorAutoConfiguration {
                             val param = discoverer.getParameterNames(method)?.filter(Objects::nonNull)?.map {
                                 params[it]
                             }?.toTypedArray()!!
+                            val model = BindingAwareConcurrentModel()
                             val message = method.invokeSuspend(bean, param)
-                            handleView(message, definition)
+                            handleView(message, definition, model)
                         }
                     }
                     POST -> {
@@ -152,7 +156,7 @@ open class KtorAutoConfiguration {
         }
     }
 
-    suspend fun PipelineContext<Unit, ApplicationCall>.handleView(result: Any?, definition: RouteDefinition) {
+    private suspend fun PipelineContext<Unit, ApplicationCall>.handleView(result: Any?, definition: RouteDefinition, model: Model) {
         if (result == null || result == Unit)
             call.respond("")
         else {
@@ -164,16 +168,11 @@ open class KtorAutoConfiguration {
                 call.respondRedirect(resultStr.removePrefix("redirect:"), true)
             else if (resultStr.startsWith("static:"))
                 call.respondRedirect("/${properties.staticRoot}/${resultStr.removePrefix("static:")}")
-//            else
-//               call.respond(FreeMarkerContent(res))
+            else
+                call.respond(FreeMarkerContent(result, model.asMap()))
         }
     }
 }
-
-//fun Any?.toMap(): Map<String, Any> {
-//
-//}
-
 
 @ConfigurationProperties(prefix = "spring.ktor")
 open class KtorProperties {

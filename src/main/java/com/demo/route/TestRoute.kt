@@ -1,12 +1,9 @@
 package com.demo.route
 
-import com.demo.common.RestResponse
 import kotlinx.coroutines.delay
 import org.springframework.stereotype.Controller
+import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.ResponseBody
-import org.springframework.web.bind.annotation.RestController
-import java.lang.RuntimeException
 
 
 /**
@@ -18,9 +15,10 @@ import java.lang.RuntimeException
 class TestRoute {
 
     @RequestMapping("/test", "tset")
-    suspend fun test(id: String): String {
+    suspend fun test(model: Model): String {
         delay(1000)
         println(Thread.currentThread().name)
-        return "static:$id"
+        model.addAttribute("test", "test from template")
+        return "index.ftl"
     }
 }
