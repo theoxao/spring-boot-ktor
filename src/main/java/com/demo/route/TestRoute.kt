@@ -1,5 +1,6 @@
 package com.demo.route
 
+import kotlinx.coroutines.delay
 import org.springframework.stereotype.Controller
 import org.springframework.web.bind.annotation.RequestMapping
 
@@ -13,8 +14,10 @@ import org.springframework.web.bind.annotation.RequestMapping
 class TestRoute {
 
     @RequestMapping("/test", "tset")
-    fun test(id: String?): String {
-        return "data +$id"
+    suspend fun test(): String {
+        delay(1000)
+        println(Thread.currentThread().name)
+        return "data "
     }
 
 }
