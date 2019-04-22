@@ -1,11 +1,14 @@
 package com.demo.configuration
 
 import com.demo.common.RestResponse
+import freemarker.cache.ClassTemplateLoader
 import io.ktor.application.ApplicationCall
 import io.ktor.application.call
 import io.ktor.application.install
 import io.ktor.features.ContentNegotiation
 import io.ktor.features.StatusPages
+import io.ktor.freemarker.FreeMarker
+import io.ktor.freemarker.FreeMarkerContent
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.resources
 import io.ktor.http.content.static
@@ -46,7 +49,7 @@ import kotlin.reflect.jvm.kotlinFunction
  */
 @Configuration
 @EnableConfigurationProperties(KtorProperties::class)
-open class KtorAutoConfiguration() {
+open class KtorAutoConfiguration {
 
     @Resource
     private lateinit var properties: KtorProperties
@@ -64,6 +67,11 @@ open class KtorAutoConfiguration() {
             install(ContentNegotiation) {
                 jackson { }
             }
+            if (Class.forName("io.ktor.freemarker.FreeMarker") != null)
+                install(FreeMarker) {
+                    templateLoader = ClassTemplateLoader(this::class.java, properties.templatesRoot)
+                }
+
             val beans = context.getBeansWithAnnotation(Controller::class.java).values
 
             val allDefinitions = beans.flatMap { bean ->
@@ -154,11 +162,17 @@ open class KtorAutoConfiguration() {
             val resultStr = result as String
             if (resultStr.startsWith("redirect:"))
                 call.respondRedirect(resultStr.removePrefix("redirect:"), true)
-            if (resultStr.startsWith("static:"))
+            else if (resultStr.startsWith("static:"))
                 call.respondRedirect("/${properties.staticRoot}/${resultStr.removePrefix("static:")}")
+//            else
+//               call.respond(FreeMarkerContent(res))
         }
     }
 }
+
+//fun Any?.toMap(): Map<String, Any> {
+//
+//}
 
 
 @ConfigurationProperties(prefix = "spring.ktor")
