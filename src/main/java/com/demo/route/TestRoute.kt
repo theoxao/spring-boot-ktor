@@ -21,6 +21,6 @@ class TestRoute {
     suspend fun test(id: String): String {
         delay(1000)
         println(Thread.currentThread().name)
-        return "redirect:$id"
+        return "static:$id"
     }
 }

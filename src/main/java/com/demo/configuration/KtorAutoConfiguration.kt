@@ -7,6 +7,8 @@ import io.ktor.application.install
 import io.ktor.features.ContentNegotiation
 import io.ktor.features.StatusPages
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.content.resources
+import io.ktor.http.content.static
 import io.ktor.jackson.jackson
 import io.ktor.response.respond
 import io.ktor.response.respondRedirect
@@ -89,6 +91,9 @@ open class KtorAutoConfiguration() {
                                 ?: "Unknown Exception"))
                     }
                 }
+                static("/${properties.staticRoot}") {
+                    resources("static/")
+                }
                 route("/") {
                     allDefinitions.forEach {
                         mapping(it)
@@ -138,18 +143,20 @@ open class KtorAutoConfiguration() {
             }
         }
     }
-}
 
-suspend fun PipelineContext<Unit, ApplicationCall>.handleView(result: Any?, definition: RouteDefinition) {
-    if (result == null || result == Unit)
-        call.respond("")
-    else {
-        if (definition.bean.javaClass.getAnnotation(ResponseBody::class.java) != null || definition.bean.javaClass.getAnnotation(RestController::class.java) != null || definition.method.getAnnotation(ResponseBody::class.java) != null)
-            call.respond(result)
-        Assert.isTrue(result is String, "unable to handle result (${result.javaClass.typeName}) without responseBody")
-        val resultStr = result as String
-        if (resultStr.startsWith("redirect:"))
-            call.respondRedirect(resultStr.removePrefix("redirect:"), true)
+    suspend fun PipelineContext<Unit, ApplicationCall>.handleView(result: Any?, definition: RouteDefinition) {
+        if (result == null || result == Unit)
+            call.respond("")
+        else {
+            if (definition.bean.javaClass.getAnnotation(ResponseBody::class.java) != null || definition.bean.javaClass.getAnnotation(RestController::class.java) != null || definition.method.getAnnotation(ResponseBody::class.java) != null)
+                call.respond(result)
+            Assert.isTrue(result is String, "unable to handle result (${result.javaClass.typeName}) without responseBody")
+            val resultStr = result as String
+            if (resultStr.startsWith("redirect:"))
+                call.respondRedirect(resultStr.removePrefix("redirect:"), true)
+            if (resultStr.startsWith("static:"))
+                call.respondRedirect("/${properties.staticRoot}/${resultStr.removePrefix("static:")}")
+        }
     }
 }
 
@@ -160,6 +167,8 @@ open class KtorProperties {
     open var port: Int = 8088
     open var enableTrace = false
     open var engine = "Netty"
+    open var staticRoot = "static"
+    open val templatesRoot = "templates"
 }
 
 
