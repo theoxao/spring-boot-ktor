@@ -2,6 +2,7 @@ package com.demo.configuration
 
 import com.demo.Application
 import com.demo.common.RestResponse
+import com.demo.util.GsonUtil
 import freemarker.cache.ClassTemplateLoader
 import io.ktor.application.ApplicationCall
 import io.ktor.application.call
@@ -98,6 +99,7 @@ open class KtorAutoConfiguration {
                 }
                 install(StatusPages) {
                     exception<Throwable> { e ->
+                        e.printStackTrace()
                         call.respond(HttpStatusCode.InternalServerError, RestResponse.error<String>(e.localizedMessage
                                 ?: "Unknown Exception"))
                     }
@@ -130,9 +132,15 @@ open class KtorAutoConfiguration {
                             //FIXME too many reflections
                             val params = call.parameters
                             val param = discoverer.getParameterNames(method)?.filter(Objects::nonNull)?.map {
-                                params[it]
+                                params[it] as Any?
                             }?.toTypedArray()!!
                             val model = BindingAwareConcurrentModel()
+                            method.parameterTypes.forEachIndexed { index, clazz ->
+                                if (clazz == Model::class.java) {
+                                    param[index] = model
+                                }
+                                println("")
+                            }
                             val message = method.invokeSuspend(bean, param)
                             handleView(message, definition, model)
                         }
@@ -164,12 +172,11 @@ open class KtorAutoConfiguration {
                 call.respond(result)
             Assert.isTrue(result is String, "unable to handle result (${result.javaClass.typeName}) without responseBody")
             val resultStr = result as String
-            if (resultStr.startsWith("redirect:"))
-                call.respondRedirect(resultStr.removePrefix("redirect:"), true)
-            else if (resultStr.startsWith("static:"))
-                call.respondRedirect("/${properties.staticRoot}/${resultStr.removePrefix("static:")}")
-            else
-                call.respond(FreeMarkerContent(result, model.asMap()))
+            when {
+                resultStr.startsWith("redirect:") -> call.respondRedirect(resultStr.removePrefix("redirect:"), true)
+                resultStr.startsWith("static:") -> call.respondRedirect("/${properties.staticRoot}/${resultStr.removePrefix("static:")}")
+                else -> call.respond(FreeMarkerContent(result, GsonUtil.toMap(GsonUtil.toJson(model.asMap()))))
+            }
         }
     }
 }

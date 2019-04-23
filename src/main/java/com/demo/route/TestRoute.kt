@@ -18,7 +18,10 @@ class TestRoute {
     suspend fun test(model: Model): String {
         delay(1000)
         println(Thread.currentThread().name)
-        model.addAttribute("test", "test from template")
+        model.addAttribute("res", User(1, "theo"))
         return "index.ftl"
     }
 }
+
+
+data class User(private val id: Int, private val name: String)
