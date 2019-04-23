@@ -8,6 +8,7 @@ import io.ktor.application.ApplicationCall
 import io.ktor.application.call
 import io.ktor.application.install
 import io.ktor.features.ContentNegotiation
+import io.ktor.features.DataConversion
 import io.ktor.features.StatusPages
 import io.ktor.freemarker.FreeMarker
 import io.ktor.freemarker.FreeMarkerContent
@@ -15,6 +16,9 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.resources
 import io.ktor.http.content.static
 import io.ktor.jackson.jackson
+import io.ktor.request.ApplicationRequest
+import io.ktor.request.receiveParameters
+import io.ktor.response.ApplicationResponse
 import io.ktor.response.respond
 import io.ktor.response.respondRedirect
 import io.ktor.routing.*
@@ -35,11 +39,8 @@ import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.util.Assert
 import org.springframework.validation.support.BindingAwareConcurrentModel
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RequestMethod
+import org.springframework.web.bind.annotation.*
 import org.springframework.web.bind.annotation.RequestMethod.*
-import org.springframework.web.bind.annotation.ResponseBody
-import org.springframework.web.bind.annotation.RestController
 import java.lang.reflect.Method
 import java.util.*
 import javax.annotation.Resource
@@ -70,6 +71,9 @@ open class KtorAutoConfiguration {
         return embeddedServer(engineFactory, properties.port, properties.host) {
             install(ContentNegotiation) {
                 jackson { }
+            }
+            install(DataConversion) {
+
             }
             if (Class.forName("io.ktor.freemarker.FreeMarker") != null)
                 install(FreeMarker) {
@@ -136,10 +140,12 @@ open class KtorAutoConfiguration {
                             }?.toTypedArray()!!
                             val model = BindingAwareConcurrentModel()
                             method.parameterTypes.forEachIndexed { index, clazz ->
-                                if (clazz == Model::class.java) {
-                                    param[index] = model
+                                param[index] = when (clazz) {
+                                    Model::class.java -> model
+                                    ApplicationRequest::class.java -> call.request
+                                    ApplicationResponse::class.java -> call.response
+                                    else -> param[index]
                                 }
-                                println("")
                             }
                             val message = method.invokeSuspend(bean, param)
                             handleView(message, definition, model)
@@ -147,6 +153,10 @@ open class KtorAutoConfiguration {
                     }
                     POST -> {
                         post(uri) {
+                            val parameters = call.receiveParameters()
+                            method.parameters.filterIndexed { index, parameter ->
+                                parameter.isAnnotationPresent(RequestBody::class.java)
+                            }
                             val param = arrayOf("1")
                             val message = method.invokeSuspend(bean, param)
                         }
@@ -194,6 +204,16 @@ open class KtorProperties {
 
 data class RouteDefinition(val method: Method, val bean: Any, var methods: Array<RequestMethod>, val uri: List<String>)
 
+
+data class Param(val name: String, val type: Class<*>, val annotations: List<Class<*>>, var value: Any?) {
+    var hasRequestBody: Boolean = annotations.contains(RequestBody::class.java)
+    var isSimpleClass: Boolean = when (type) {
+        Int::class.java, Long::class.java, Double::class.java, Boolean::class.java, Float::class.java, String::class.java -> true
+        else -> false
+    }
+}
+
+
 /**
  * invoke method
  * if its suspend, set continuation
@@ -209,3 +229,4 @@ suspend fun Method.invokeSuspend(obj: Any, args: Array<*>): Any? =
         } else {
             invoke(obj, *args)
         }
+
