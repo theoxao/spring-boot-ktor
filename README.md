@@ -1,5 +1,5 @@
-
-@Deprecated  move to [github](https://github.com/theoxaos/spring-boot-ktor/blob/master/pom.xml)  
+@Deprecated  
+move to [github](https://github.com/theoxaos/spring-boot-ktor)  
 
 
 
