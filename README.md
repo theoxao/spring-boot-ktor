@@ -5,7 +5,8 @@
 * [x] support java class route   
 * [ ] parameter mapping to model  
 * [x] support response redirect  
-* [ ] support static resource  
+* [x] support static resource  
+* [ ] inject Model Request and Response
 * [ ] handle exception  
 * [ ] file upload and download  
 * [ ] handle CQRS  
