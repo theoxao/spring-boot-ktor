@@ -1,25 +1,26 @@
 package com.demo.route
 
 import kotlinx.coroutines.delay
-import org.springframework.stereotype.Controller
-import org.springframework.ui.Model
+import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RestController
 
 
 /**
  * @author theo
  * @date 2019/4/16
  */
-@Controller
+@RestController
 @RequestMapping("/demo", "omed")
 class TestRoute {
 
     @RequestMapping("/test", "tset")
-    suspend fun test(model: Model): String {
-        delay(1000)
-        println(Thread.currentThread().name)
-        model.addAttribute("res", User(1, "theo"))
-        return "index.ftl"
+
+    suspend fun test(@RequestBody user: User): User {
+//        delay(1000)
+//        println(Thread.currentThread().name)
+//        model.addAttribute("res", User(1, "theo"))
+        return user
     }
 }
 

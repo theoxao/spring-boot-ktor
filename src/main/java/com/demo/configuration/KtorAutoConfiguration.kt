@@ -129,14 +129,14 @@ open class KtorAutoConfiguration {
             definition.methods = values()
         }
         definition.methods.forEach { requestMethod ->
+
             definition.uri.forEach { uri ->
+                var params = method.parameters
                 when (requestMethod) {
                     GET -> {
                         get(uri) {
-                            //FIXME too many reflections
-                            val params = call.parameters
                             val param = discoverer.getParameterNames(method)?.filter(Objects::nonNull)?.map {
-                                params[it] as Any?
+                                call.parameters[it] as Any?
                             }?.toTypedArray()!!
                             val model = BindingAwareConcurrentModel()
                             method.parameterTypes.forEachIndexed { index, clazz ->
