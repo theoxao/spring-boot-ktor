@@ -1,9 +1,7 @@
 package com.demo.route
 
-import kotlinx.coroutines.delay
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.ui.Model
+import org.springframework.web.bind.annotation.*
 
 
 /**
@@ -14,15 +12,16 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/demo", "omed")
 class TestRoute {
 
-    @RequestMapping("/test", "tset")
+    @RequestMapping(value = ["/test", "tset"], method = [RequestMethod.GET])
 
-    suspend fun test(@RequestBody user: User): User {
+    suspend fun test(@RequestBody user: User, @CookieValue age: Int?, model: Model): User {
 //        delay(1000)
 //        println(Thread.currentThread().name)
 //        model.addAttribute("res", User(1, "theo"))
+        user.age = age
         return user
     }
 }
 
 
-data class User(private val id: Int, private val name: String)
+data class User(var id: Int, var name: String, var age: Int?)
