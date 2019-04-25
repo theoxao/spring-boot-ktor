@@ -1,3 +1,8 @@
+@Deprecated  
+move to [github](https://github.com/theoxaos/spring-boot-ktor)  
+
+
+
 ##### dev ![Progress](http://progressed.io/bar/40)
 
 * [x] route registry  
