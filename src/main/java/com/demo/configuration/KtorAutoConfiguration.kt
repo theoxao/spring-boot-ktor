@@ -176,8 +176,8 @@ open class KtorAutoConfiguration {
                                         }
                                         param.fromRequestHead -> {
                                             val rh = (param.methodParam.getAnnotation(RequestHeader::class.java))
-                                            val hv = call.request.header(rh.name) ?: call.request.header(param.name)
-                                            ?: rh.defaultValue
+                                            call.request.header(rh.name) ?: call.request.header(param.name)
+                                            ?: rh.defaultValue.parse(param.type)
                                         }
                                         param.fromSession -> {
                                             val sa = (param.methodParam.getAnnotation(SessionAttribute::class.java))
