@@ -39,6 +39,7 @@ import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.sessions.Sessions
 import io.ktor.sessions.sessions
+import io.ktor.util.DefaultConversionService
 import io.ktor.util.KtorExperimentalAPI
 import io.ktor.util.pipeline.PipelineContext
 import org.springframework.boot.context.properties.ConfigurationProperties
@@ -55,6 +56,7 @@ import org.springframework.web.bind.annotation.*
 import org.springframework.web.bind.annotation.RequestMethod.*
 import java.lang.reflect.Method
 import java.lang.reflect.Parameter
+import java.lang.reflect.ParameterizedType
 import java.math.BigDecimal
 import java.math.BigInteger
 import javax.annotation.Resource
@@ -176,17 +178,24 @@ open class KtorAutoConfiguration {
                                         }
                                         param.fromRequestHead -> {
                                             val rh = (param.methodParam.getAnnotation(RequestHeader::class.java))
-                                            call.request.header(rh.name) ?: call.request.header(param.name)
-                                            ?: rh.defaultValue.parse(param.type)
+                                            (call.request.header(rh.name) ?: call.request.header(param.name)
+                                            ?: rh.defaultValue).parse(param.type)
                                         }
                                         param.fromSession -> {
+                                            //TODO some problems
                                             val sa = (param.methodParam.getAnnotation(SessionAttribute::class.java))
-                                            call.sessions.get(sa.name) ?: call.sessions.get(param.name)
+                                            val sessions = call.sessions
+                                            sessions.get(sa.name) ?: sessions.get(param.name)
                                         }
                                         param.fromCookie -> {
                                             val kv = (param.methodParam.getAnnotation(CookieValue::class.java))
-                                            call.request.cookies[kv.name] ?: call.request.cookies[param.name]
-                                            ?: kv.defaultValue.parse(param.type)
+                                            (call.request.cookies[kv.name] ?: call.request.cookies[param.name]
+                                            ?: kv.defaultValue).parse(param.type)
+                                        }
+                                        param.isList -> {
+//                                           DefaultConversionService.fromValues(arrayOf(call.parameters[param.name]).toList() ,param.type)
+////                                            println(1)
+////                                            1
                                         }
                                         param.isSimpleClass -> {
                                             call.parameters[param.name]?.parse(param.type)
@@ -266,7 +275,6 @@ data class RouteDefinition(val method: Method, val bean: Any, var methods: Array
 
 fun <T> String.parse(t: Class<*>): T? {
     if (this.isBlank() || this == ValueConstants.DEFAULT_NONE) return null
-
     return try {
         when (t) {
             Int::class.java, java.lang.Integer::class.java -> this.toInt()
@@ -288,6 +296,11 @@ data class Param(val name: String, val type: Class<*>, var value: Any?, var meth
     var fromRequestHead: Boolean = methodParam.isAnnotationPresent(RequestHeader::class.java)
     var fromSession: Boolean = methodParam.isAnnotationPresent(SessionAttribute::class.java) || methodParam.isAnnotationPresent(SessionAttributes::class.java)
     var fromCookie: Boolean = methodParam.isAnnotationPresent(CookieValue::class.java)
+    var isList: Boolean = when (type) {
+        List::class.java, java.util.List::class.java,
+        ArrayList::class.java, java.util.ArrayList::class.java, java.util.LinkedList::class.java -> true
+        else -> false
+    }
     //TODO only one of above is allowed
     var isSimpleClass = when (type) {
         java.lang.Integer::class.java, java.lang.Float::class.java,
