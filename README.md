@@ -16,6 +16,6 @@ move to [github](https://github.com/theoxaos/spring-boot-ktor)
 * [x] support static resource  
 * [x] inject Model Request and Response
 * [ ] handle exception  
-* [ ] file upload and download  
+* [x] file upload(support multipart file) and download (inject ApplicationResponse)
 * [ ] handle CQRS  
 * [x] handle response view   freemarker supported
