@@ -3,7 +3,7 @@ move to [github](https://github.com/theoxaos/spring-boot-ktor)
 
 
 
-##### dev ![Progress](http://progressed.io/bar/40)
+##### dev ![Progress](http://progressed.io/bar/85)
 
 * [x] route registry  
 * [x] parameter receive   
