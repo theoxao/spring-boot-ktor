@@ -10,21 +10,21 @@ import io.ktor.application.ApplicationCall
 import io.ktor.application.call
 import io.ktor.application.install
 import io.ktor.features.ContentNegotiation
+import io.ktor.features.PartialContent
 import io.ktor.features.StatusPages
 import io.ktor.freemarker.FreeMarker
 import io.ktor.freemarker.FreeMarkerContent
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.Parameters
+import io.ktor.http.content.PartData
+import io.ktor.http.content.forEachPart
 import io.ktor.http.content.resources
 import io.ktor.http.content.static
 import io.ktor.jackson.jackson
 import io.ktor.locations.KtorExperimentalLocationsAPI
 import io.ktor.locations.Locations
 import io.ktor.locations.locations
-import io.ktor.request.ApplicationRequest
-import io.ktor.request.header
-import io.ktor.request.receiveOrNull
-import io.ktor.request.receiveParameters
+import io.ktor.request.*
 import io.ktor.response.ApplicationResponse
 import io.ktor.response.respond
 import io.ktor.response.respondRedirect
@@ -39,7 +39,6 @@ import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.sessions.Sessions
 import io.ktor.sessions.sessions
-import io.ktor.util.DefaultConversionService
 import io.ktor.util.KtorExperimentalAPI
 import io.ktor.util.pipeline.PipelineContext
 import org.springframework.boot.context.properties.ConfigurationProperties
@@ -54,6 +53,8 @@ import org.springframework.util.ReflectionUtils
 import org.springframework.validation.support.BindingAwareConcurrentModel
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.bind.annotation.RequestMethod.*
+import org.springframework.web.multipart.MultipartFile
+import java.io.File
 import java.lang.reflect.Method
 import java.lang.reflect.Parameter
 import java.lang.reflect.ParameterizedType
@@ -94,6 +95,7 @@ open class KtorAutoConfiguration {
             }
             install(Locations)
             install(Sessions)
+            install(PartialContent)
             if (Class.forName("io.ktor.freemarker.FreeMarker") != null)
                 install(FreeMarker) {
                     templateLoader = ClassTemplateLoader(Application::class.java, "/${properties.templatesRoot}")
@@ -173,6 +175,19 @@ open class KtorAutoConfiguration {
                                     ApplicationResponse::class.java -> call.response
                                     Continuation::class.java -> null
                                     else -> when {
+                                        param.fromMultipart -> {
+                                            val multipart = call.receiveMultipart()
+                                            var file: MultipartFile? = null
+                                            multipart.forEachPart {
+                                                it as PartData.FileItem
+                                                if (it.name == param.name) {
+                                                    val ext = File(it.originalFileName).extension
+                                                    file = KtorMultipartFile(it)
+                                                }
+                                                it.dispose()
+                                            }
+                                            file
+                                        }
                                         param.fromRequestBody -> {
                                             call.receiveOrNull(param.type.kotlin)
                                         }
@@ -193,9 +208,15 @@ open class KtorAutoConfiguration {
                                             ?: kv.defaultValue).parse(param.type)
                                         }
                                         param.isList -> {
-//                                           DefaultConversionService.fromValues(arrayOf(call.parameters[param.name]).toList() ,param.type)
-////                                            println(1)
-////                                            1
+                                            //only support url parameter
+                                            val p = call.parameters[param.name]
+                                            val generic = param.type.genericInterfaces[0]
+                                            if (ParameterizedType::class.java.isInstance(generic)) {
+                                                val pt = generic as ParameterizedType
+                                                val rawType = pt.rawType as Class<*>
+//                                                val a= DefaultConversionService.fromValues(arrayOf(p).toList(),pt)
+                                            }
+                                            1
                                         }
                                         param.isSimpleClass -> {
                                             call.parameters[param.name]?.parse(param.type)
@@ -296,12 +317,12 @@ data class Param(val name: String, val type: Class<*>, var value: Any?, var meth
     var fromRequestHead: Boolean = methodParam.isAnnotationPresent(RequestHeader::class.java)
     var fromSession: Boolean = methodParam.isAnnotationPresent(SessionAttribute::class.java) || methodParam.isAnnotationPresent(SessionAttributes::class.java)
     var fromCookie: Boolean = methodParam.isAnnotationPresent(CookieValue::class.java)
+    var fromMultipart: Boolean = methodParam.type == MultipartFile::class.java
     var isList: Boolean = when (type) {
         List::class.java, java.util.List::class.java,
         ArrayList::class.java, java.util.ArrayList::class.java, java.util.LinkedList::class.java -> true
         else -> false
     }
-    //TODO only one of above is allowed
     var isSimpleClass = when (type) {
         java.lang.Integer::class.java, java.lang.Float::class.java,
         java.lang.Double::class.java, java.lang.Long::class.java,
