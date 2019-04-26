@@ -14,7 +14,7 @@ class TestRoute {
 
     @RequestMapping(value = ["/test", "tset"], method = [RequestMethod.GET])
 
-    suspend fun test(@RequestBody user: User, age: List<Int>?, model: Model): User {
+    suspend fun test(@RequestBody user: User, age: Int?, model: Model): User {
 //        delay(1000)
 //        println(Thread.currentThread().name)
 //        model.addAttribute("res", User(1, "theo"))
@@ -23,4 +23,4 @@ class TestRoute {
     }
 }
 
-data class User(var id: Int, var name: String, var age: List<Int>?)
+data class User(var id: Int, var name: String, var age: Int?)

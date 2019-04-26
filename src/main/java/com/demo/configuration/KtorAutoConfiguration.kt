@@ -1,5 +1,3 @@
-@file:Suppress("IMPLICIT_CAST_TO_ANY")
-
 package com.demo.configuration
 
 import com.demo.Application
@@ -16,20 +14,11 @@ import io.ktor.freemarker.FreeMarker
 import io.ktor.freemarker.FreeMarkerContent
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
-import io.ktor.http.Parameters
-import io.ktor.http.content.PartData
-import io.ktor.http.content.forEachPart
 import io.ktor.http.content.resources
 import io.ktor.http.content.static
 import io.ktor.jackson.jackson
 import io.ktor.locations.KtorExperimentalLocationsAPI
 import io.ktor.locations.Locations
-import io.ktor.locations.locations
-import io.ktor.request.ApplicationRequest
-import io.ktor.request.header
-import io.ktor.request.receiveMultipart
-import io.ktor.request.receiveOrNull
-import io.ktor.response.ApplicationResponse
 import io.ktor.response.respond
 import io.ktor.response.respondRedirect
 import io.ktor.routing.Route
@@ -41,10 +30,8 @@ import io.ktor.server.engine.EngineAPI
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.sessions.Sessions
-import io.ktor.sessions.sessions
 import io.ktor.util.KtorExperimentalAPI
 import io.ktor.util.pipeline.PipelineContext
-import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.ApplicationContext
 import org.springframework.context.annotation.Bean
@@ -52,19 +39,13 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.core.LocalVariableTableParameterNameDiscoverer
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
-import org.springframework.util.ReflectionUtils
-import org.springframework.validation.support.BindingAwareConcurrentModel
-import org.springframework.web.bind.annotation.*
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestMethod
 import org.springframework.web.bind.annotation.RequestMethod.values
-import org.springframework.web.multipart.MultipartFile
-import java.io.File
+import org.springframework.web.bind.annotation.ResponseBody
+import org.springframework.web.bind.annotation.RestController
 import java.lang.reflect.Method
-import java.lang.reflect.Parameter
-import java.lang.reflect.ParameterizedType
-import java.math.BigDecimal
-import java.math.BigInteger
 import javax.annotation.Resource
-import kotlin.coroutines.Continuation
 import kotlin.coroutines.intrinsics.suspendCoroutineUninterceptedOrReturn
 import kotlin.reflect.jvm.kotlinFunction
 
@@ -162,10 +143,6 @@ open class KtorAutoConfiguration {
                                 param
                             }
                         } ?: arrayListOf()
-//                val hasRequestBody = methodParams.map { it.fromRequestBody }.reduce { acc, b -> acc || b }
-//                val hasRequestHeader = methodParams.map { it.fromRequestHead }.reduce { acc, b -> acc || b }
-//                val hasSession = methodParams.map { it.fromSession }.reduce { acc, b -> acc || b }
-//                val hasCookie = methodParams.map { it.fromCookie }.reduce { acc, b -> acc || b }
                 route(uri, HttpMethod.parse(requestMethod.name)) {
                     handle {
                         val model = handlerParam(methodParams)
@@ -177,73 +154,7 @@ open class KtorAutoConfiguration {
         }
     }
 
-
-    @KtorExperimentalLocationsAPI
-    private suspend fun PipelineContext<Unit, ApplicationCall>.handlerParam(methodParams: List<Param>): Model {
-        val model by lazy { BindingAwareConcurrentModel() }
-        methodParams.forEachIndexed { index, param ->
-            param.value = when (param.methodParam.type) {
-                Model::class.java -> model
-                ApplicationRequest::class.java -> call.request
-                ApplicationResponse::class.java -> call.response
-                Continuation::class.java -> null
-                else -> when {
-                    param.fromMultipart -> {
-                        val multipart = call.receiveMultipart()
-                        var file: MultipartFile? = null
-                        multipart.forEachPart {
-                            it as PartData.FileItem
-                            if (it.name == param.name) {
-                                val ext = File(it.originalFileName).extension
-                                file = KtorMultipartFile(it)
-                            }
-                            it.dispose()
-                        }
-                        file
-                    }
-                    param.fromRequestBody -> {
-                        call.receiveOrNull(param.type.kotlin)
-                    }
-                    param.fromRequestHead -> {
-                        val rh = (param.methodParam.getAnnotation(RequestHeader::class.java))
-                        (call.request.header(rh.name) ?: call.request.header(param.name)
-                        ?: rh.defaultValue).parse(param.type)
-                    }
-                    param.fromSession -> {
-                        //TODO some problems
-                        val sa = (param.methodParam.getAnnotation(SessionAttribute::class.java))
-                        val sessions = call.sessions
-                        sessions.get(sa.name) ?: sessions.get(param.name)
-                    }
-                    param.fromCookie -> {
-                        val kv = (param.methodParam.getAnnotation(CookieValue::class.java))
-                        (call.request.cookies[kv.name] ?: call.request.cookies[param.name]
-                        ?: kv.defaultValue).parse(param.type)
-                    }
-                    param.isList -> {
-                        //only support url parameter
-                        val p = call.parameters[param.name]
-                        val generic = param.type.genericInterfaces[0]
-                        if (ParameterizedType::class.java.isInstance(generic)) {
-                            val pt = generic as ParameterizedType
-                            val rawType = pt.rawType as Class<*>
-//                                                val a= DefaultConversionService.fromValues(arrayOf(p).toList(),pt)
-                        }
-                        1
-                    }
-                    param.isSimpleClass -> {
-                        call.parameters[param.name]?.parse(param.type)
-                    }
-                    else -> {
-                        call.locations.resolve(param.type.kotlin, call)
-                    }
-                }
-            }
-        }
-        return model
-    }
-
-    private suspend fun PipelineContext<Unit, ApplicationCall>.handleView(result: Any?, definition: RouteDefinition, model: Model?) {
+    suspend fun PipelineContext<Unit, ApplicationCall>.handleView(result: Any?, definition: RouteDefinition, model: Model?) {
         if (result == null || result == Unit)
             call.respond("")
         else {
@@ -260,72 +171,9 @@ open class KtorAutoConfiguration {
             }
         }
     }
-
 }
-
-inline fun <reified T> T.fromParam(parameters: Parameters): T {
-    ReflectionUtils.doWithFields(T::class.java) {
-        it.isAccessible = true
-        it.set(this, parameters[it.name])
-    }
-    return this
-}
-
-@ConfigurationProperties(prefix = "spring.ktor")
-open class KtorProperties {
-    open var host: String = "0.0.0.0"
-    open var port: Int = 8088
-    open var enableTrace = false
-    open var engine = "Netty"
-    open var staticRoot = "static"
-    open val templatesRoot = "templates"
-}
-
 
 data class RouteDefinition(val method: Method, val bean: Any, var methods: Array<RequestMethod>, val uri: List<String>)
-
-fun <T> String.parse(t: Class<*>): T? {
-    if (this.isBlank() || this == ValueConstants.DEFAULT_NONE) return null
-    return try {
-        when (t) {
-            Int::class.java, java.lang.Integer::class.java -> this.toInt()
-            Float::class.java, java.lang.Float::class.java -> this.toFloat()
-            Double::class.java, java.lang.Double::class.java -> this.toDouble()
-            Long::class.java, java.lang.Long::class.java -> this.toLong()
-            Boolean::class.java, java.lang.Boolean::class.java -> this.toBoolean()
-            BigDecimal::class.java -> this.toBigDecimal()
-            BigInteger::class.java -> this.toBigInteger()
-            else -> this
-        } as T
-    } catch (e: NumberFormatException) {
-        throw RuntimeException("NumberFormatException, " + e.message)
-    }
-}
-
-data class Param(val name: String, val type: Class<*>, var value: Any?, var methodParam: Parameter) {
-    var fromRequestBody: Boolean = methodParam.isAnnotationPresent(RequestBody::class.java)
-    var fromRequestHead: Boolean = methodParam.isAnnotationPresent(RequestHeader::class.java)
-    var fromSession: Boolean = methodParam.isAnnotationPresent(SessionAttribute::class.java) || methodParam.isAnnotationPresent(SessionAttributes::class.java)
-    var fromCookie: Boolean = methodParam.isAnnotationPresent(CookieValue::class.java)
-    var fromMultipart: Boolean = methodParam.type == MultipartFile::class.java
-    var isList: Boolean = when (type) {
-        List::class.java, java.util.List::class.java,
-        ArrayList::class.java, java.util.ArrayList::class.java, java.util.LinkedList::class.java -> true
-        else -> false
-    }
-    var isSimpleClass = when (type) {
-        java.lang.Integer::class.java, java.lang.Float::class.java,
-        java.lang.Double::class.java, java.lang.Long::class.java,
-        java.lang.Boolean::class.java, java.lang.String::class.java,
-        BigDecimal::class.java, BigInteger::class.java,
-        Int::class.java, Float::class.java,
-        Double::class.java, Long::class.java,
-        Boolean::class.java, String::class.java,
-        Char::class.java -> true
-        else -> false
-    }
-}
-
 
 /**
  * invoke method
