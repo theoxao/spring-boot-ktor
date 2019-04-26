@@ -102,6 +102,7 @@ suspend fun PipelineContext<Unit, ApplicationCall>.handlerParam(methodParams: Li
                 }
                 param.isList -> {
                     //only support url parameter
+                    //TODO this isn't right
                     val p = call.parameters[param.name]
                     val generic = param.type.genericInterfaces[0]
                     if (ParameterizedType::class.java.isInstance(generic)) {

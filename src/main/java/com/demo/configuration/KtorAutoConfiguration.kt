@@ -74,7 +74,6 @@ open class KtorAutoConfiguration {
         return embeddedServer(engineFactory, properties.port, properties.host) {
             install(ContentNegotiation) {
                 jackson {
-
                 }
             }
             install(Locations)
@@ -154,7 +153,7 @@ open class KtorAutoConfiguration {
         }
     }
 
-    suspend fun PipelineContext<Unit, ApplicationCall>.handleView(result: Any?, definition: RouteDefinition, model: Model?) {
+    private suspend fun PipelineContext<Unit, ApplicationCall>.handleView(result: Any?, definition: RouteDefinition, model: Model?) {
         if (result == null || result == Unit)
             call.respond("")
         else {
@@ -162,11 +161,11 @@ open class KtorAutoConfiguration {
                 call.respond(result)
                 return
             }
-//            Assert.isTrue(result is String, "unable to handle result (${result.javaClass.typeName}) without responseBody")
             val resultStr = result as String
             when {
                 resultStr.startsWith("redirect:") -> call.respondRedirect(resultStr.removePrefix("redirect:"), true)
                 resultStr.startsWith("static:") -> call.respondRedirect("/${properties.staticRoot}/${resultStr.removePrefix("static:")}")
+                //TODO try other solutions
                 else -> call.respond(FreeMarkerContent(result, GsonUtil.toMap(GsonUtil.toJson(model!!.asMap()))))
             }
         }
