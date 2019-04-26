@@ -14,6 +14,7 @@ import io.ktor.features.PartialContent
 import io.ktor.features.StatusPages
 import io.ktor.freemarker.FreeMarker
 import io.ktor.freemarker.FreeMarkerContent
+import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.Parameters
 import io.ktor.http.content.PartData
@@ -24,12 +25,14 @@ import io.ktor.jackson.jackson
 import io.ktor.locations.KtorExperimentalLocationsAPI
 import io.ktor.locations.Locations
 import io.ktor.locations.locations
-import io.ktor.request.*
+import io.ktor.request.ApplicationRequest
+import io.ktor.request.header
+import io.ktor.request.receiveMultipart
+import io.ktor.request.receiveOrNull
 import io.ktor.response.ApplicationResponse
 import io.ktor.response.respond
 import io.ktor.response.respondRedirect
 import io.ktor.routing.Route
-import io.ktor.routing.post
 import io.ktor.routing.route
 import io.ktor.routing.routing
 import io.ktor.server.cio.CIO
@@ -52,7 +55,7 @@ import org.springframework.ui.Model
 import org.springframework.util.ReflectionUtils
 import org.springframework.validation.support.BindingAwareConcurrentModel
 import org.springframework.web.bind.annotation.*
-import org.springframework.web.bind.annotation.RequestMethod.*
+import org.springframework.web.bind.annotation.RequestMethod.values
 import org.springframework.web.multipart.MultipartFile
 import java.io.File
 import java.lang.reflect.Method
@@ -159,99 +162,85 @@ open class KtorAutoConfiguration {
                                 param
                             }
                         } ?: arrayListOf()
-                val hasRequestBody = methodParams.map { it.fromRequestBody }.reduce { acc, b -> acc || b }
-                val hasRequestHeader = methodParams.map { it.fromRequestHead }.reduce { acc, b -> acc || b }
-                val hasSession = methodParams.map { it.fromSession }.reduce { acc, b -> acc || b }
-                val hasCookie = methodParams.map { it.fromCookie }.reduce { acc, b -> acc || b }
-                when (requestMethod) {
-                    GET -> {
-                        post(uri) {
-                            val model by lazy { BindingAwareConcurrentModel() }
-//                            val requestParam by lazy { call.parameters }
-                            methodParams.forEachIndexed { index, param ->
-                                param.value = when (param.methodParam.type) {
-                                    Model::class.java -> model
-                                    ApplicationRequest::class.java -> call.request
-                                    ApplicationResponse::class.java -> call.response
-                                    Continuation::class.java -> null
-                                    else -> when {
-                                        param.fromMultipart -> {
-                                            val multipart = call.receiveMultipart()
-                                            var file: MultipartFile? = null
-                                            multipart.forEachPart {
-                                                it as PartData.FileItem
-                                                if (it.name == param.name) {
-                                                    val ext = File(it.originalFileName).extension
-                                                    file = KtorMultipartFile(it)
-                                                }
-                                                it.dispose()
-                                            }
-                                            file
-                                        }
-                                        param.fromRequestBody -> {
-                                            call.receiveOrNull(param.type.kotlin)
-                                        }
-                                        param.fromRequestHead -> {
-                                            val rh = (param.methodParam.getAnnotation(RequestHeader::class.java))
-                                            (call.request.header(rh.name) ?: call.request.header(param.name)
-                                            ?: rh.defaultValue).parse(param.type)
-                                        }
-                                        param.fromSession -> {
-                                            //TODO some problems
-                                            val sa = (param.methodParam.getAnnotation(SessionAttribute::class.java))
-                                            val sessions = call.sessions
-                                            sessions.get(sa.name) ?: sessions.get(param.name)
-                                        }
-                                        param.fromCookie -> {
-                                            val kv = (param.methodParam.getAnnotation(CookieValue::class.java))
-                                            (call.request.cookies[kv.name] ?: call.request.cookies[param.name]
-                                            ?: kv.defaultValue).parse(param.type)
-                                        }
-                                        param.isList -> {
-                                            //only support url parameter
-                                            val p = call.parameters[param.name]
-                                            val generic = param.type.genericInterfaces[0]
-                                            if (ParameterizedType::class.java.isInstance(generic)) {
-                                                val pt = generic as ParameterizedType
-                                                val rawType = pt.rawType as Class<*>
-//                                                val a= DefaultConversionService.fromValues(arrayOf(p).toList(),pt)
-                                            }
-                                            1
-                                        }
-                                        param.isSimpleClass -> {
-                                            call.parameters[param.name]?.parse(param.type)
-                                        }
-                                        else -> {
-                                            call.locations.resolve(param.type.kotlin, call)
-                                        }
-                                    }
-                                }
-                            }
-                            val message = method.invokeSuspend(bean, methodParams.map { it.value }.toTypedArray())
-                            handleView(message, definition, model)
-                        }
-                    }
-                    POST -> {
-                        post(uri) {
-                            val parameters = call.receiveParameters()
-                            method.parameters.filterIndexed { index, parameter ->
-                                parameter.isAnnotationPresent(RequestBody::class.java)
-                            }
-                            val param = arrayOf("1")
-                            val message = method.invokeSuspend(bean, param)
-                        }
-                    }
-//                HEAD -> TODO()
-//                PUT -> TODO()
-//                PATCH -> TODO()
-//                DELETE -> TODO()
-//                OPTIONS -> TODO()
-//                TRACE -> TODO()
-                    else -> {
+//                val hasRequestBody = methodParams.map { it.fromRequestBody }.reduce { acc, b -> acc || b }
+//                val hasRequestHeader = methodParams.map { it.fromRequestHead }.reduce { acc, b -> acc || b }
+//                val hasSession = methodParams.map { it.fromSession }.reduce { acc, b -> acc || b }
+//                val hasCookie = methodParams.map { it.fromCookie }.reduce { acc, b -> acc || b }
+                route(uri, HttpMethod.parse(requestMethod.name)) {
+                    handle {
+                        val model = handlerParam(methodParams)
+                        val message = method.invokeSuspend(bean, methodParams.map { it.value }.toTypedArray())
+                        handleView(message, definition, model)
                     }
                 }
             }
         }
+    }
+
+
+    @KtorExperimentalLocationsAPI
+    private suspend fun PipelineContext<Unit, ApplicationCall>.handlerParam(methodParams: List<Param>): Model {
+        val model by lazy { BindingAwareConcurrentModel() }
+        methodParams.forEachIndexed { index, param ->
+            param.value = when (param.methodParam.type) {
+                Model::class.java -> model
+                ApplicationRequest::class.java -> call.request
+                ApplicationResponse::class.java -> call.response
+                Continuation::class.java -> null
+                else -> when {
+                    param.fromMultipart -> {
+                        val multipart = call.receiveMultipart()
+                        var file: MultipartFile? = null
+                        multipart.forEachPart {
+                            it as PartData.FileItem
+                            if (it.name == param.name) {
+                                val ext = File(it.originalFileName).extension
+                                file = KtorMultipartFile(it)
+                            }
+                            it.dispose()
+                        }
+                        file
+                    }
+                    param.fromRequestBody -> {
+                        call.receiveOrNull(param.type.kotlin)
+                    }
+                    param.fromRequestHead -> {
+                        val rh = (param.methodParam.getAnnotation(RequestHeader::class.java))
+                        (call.request.header(rh.name) ?: call.request.header(param.name)
+                        ?: rh.defaultValue).parse(param.type)
+                    }
+                    param.fromSession -> {
+                        //TODO some problems
+                        val sa = (param.methodParam.getAnnotation(SessionAttribute::class.java))
+                        val sessions = call.sessions
+                        sessions.get(sa.name) ?: sessions.get(param.name)
+                    }
+                    param.fromCookie -> {
+                        val kv = (param.methodParam.getAnnotation(CookieValue::class.java))
+                        (call.request.cookies[kv.name] ?: call.request.cookies[param.name]
+                        ?: kv.defaultValue).parse(param.type)
+                    }
+                    param.isList -> {
+                        //only support url parameter
+                        val p = call.parameters[param.name]
+                        val generic = param.type.genericInterfaces[0]
+                        if (ParameterizedType::class.java.isInstance(generic)) {
+                            val pt = generic as ParameterizedType
+                            val rawType = pt.rawType as Class<*>
+//                                                val a= DefaultConversionService.fromValues(arrayOf(p).toList(),pt)
+                        }
+                        1
+                    }
+                    param.isSimpleClass -> {
+                        call.parameters[param.name]?.parse(param.type)
+                    }
+                    else -> {
+                        call.locations.resolve(param.type.kotlin, call)
+                    }
+                }
+            }
+        }
+        return model
     }
 
     private suspend fun PipelineContext<Unit, ApplicationCall>.handleView(result: Any?, definition: RouteDefinition, model: Model?) {
@@ -271,6 +260,7 @@ open class KtorAutoConfiguration {
             }
         }
     }
+
 }
 
 inline fun <reified T> T.fromParam(parameters: Parameters): T {
