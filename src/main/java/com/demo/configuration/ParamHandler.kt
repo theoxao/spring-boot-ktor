@@ -74,7 +74,6 @@ suspend fun PipelineContext<Unit, ApplicationCall>.handlerParam(methodParams: Li
                     multipart.forEachPart {
                         it as PartData.FileItem
                         if (it.name == param.name) {
-                            val ext = File(it.originalFileName).extension
                             file = KtorMultipartFile(it)
                         }
                         it.dispose()
