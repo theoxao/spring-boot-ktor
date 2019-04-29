@@ -77,3 +77,8 @@ spring:
 @ResponseBody
 @RestController
 ```
+
+* request and response inject 
+```kotlin
+fun base64(request:ApplicationRequest,response:ApplicationResponse): String ...
+```
