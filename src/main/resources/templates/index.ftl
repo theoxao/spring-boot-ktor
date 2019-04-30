@@ -1,2 +1,0 @@
-${res.id}
-${res.name}
