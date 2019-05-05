@@ -1,7 +1,7 @@
 ### ktor and spring-web integrate
 * easy to migrate from spring-boot-web(or webflux)
 
-##### progress ![Progress](http://progressed.io/bar/85)
+![version](https://img.shields.io/jitpack/v/github/theoxao/spring-boot-ktor.svg?label=jitpack&style=flat-square)
 
 * [x] route registry  
 * [x] parameter receive   
