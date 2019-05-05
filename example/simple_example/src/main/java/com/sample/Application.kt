@@ -26,10 +26,10 @@ open class FooController(private val fooService: FooService) {
 
     @RequestMapping(value = ["bar", "bax"], method = [RequestMethod.POST])
     suspend fun local(
-            @RequestBody user: User,
-            @CookieValue("cook") cookie: String,
-            @RequestHeader("token") token: String,
-            bar: String
+            @RequestBody user: User?,
+            @CookieValue("cook") cookie: String?,
+            @RequestHeader("token") token: String?,
+            bar: String?
     ): String {
         delay(1000)
         GlobalScope.launch {
