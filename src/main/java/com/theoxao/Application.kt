@@ -1,4 +1,4 @@
-package com.demo
+package com.theoxao
 
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.autoconfigure.jdbc.JdbcTemplateAutoConfiguration

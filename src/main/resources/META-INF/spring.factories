@@ -1,1 +1,1 @@
-org.springframework.boot.autoconfigure.EnableAutoConfiguration=com.demo.configuration.KtorAutoConfiguration
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=com.theoxao.configuration.KtorAutoConfiguration

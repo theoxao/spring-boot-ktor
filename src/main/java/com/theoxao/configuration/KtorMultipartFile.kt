@@ -1,4 +1,4 @@
-package com.demo.configuration
+package com.theoxao.configuration
 
 import io.ktor.http.content.PartData
 import io.ktor.http.content.streamProvider

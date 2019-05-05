@@ -1,4 +1,4 @@
-package com.demo.configuration
+package com.theoxao.configuration
 
 import org.springframework.boot.context.properties.ConfigurationProperties
 

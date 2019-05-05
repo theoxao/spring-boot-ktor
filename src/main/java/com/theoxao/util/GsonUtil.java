@@ -1,4 +1,4 @@
-package com.demo.util;
+package com.theoxao.util;
 
 import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;

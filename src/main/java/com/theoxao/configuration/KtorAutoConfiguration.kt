@@ -1,8 +1,8 @@
-package com.demo.configuration
+package com.theoxao.configuration
 
-import com.demo.Application
-import com.demo.common.RestResponse
-import com.demo.util.GsonUtil
+import com.theoxao.Application
+import com.theoxao.common.RestResponse
+import com.theoxao.util.GsonUtil
 import freemarker.cache.ClassTemplateLoader
 import io.ktor.application.ApplicationCall
 import io.ktor.application.call
