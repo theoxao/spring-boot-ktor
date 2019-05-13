@@ -2,6 +2,7 @@ package com.theoxao.configuration
 
 import com.theoxao.Application
 import com.theoxao.common.RestResponse
+import com.theoxao.resolver.Filter
 import com.theoxao.util.GsonUtil
 import freemarker.cache.ClassTemplateLoader
 import io.ktor.application.ApplicationCall
@@ -60,6 +61,9 @@ open class KtorAutoConfiguration {
 
     @Resource
     private lateinit var properties: KtorProperties
+
+    @Resource
+    private lateinit var context: ApplicationContext
 
     @KtorExperimentalLocationsAPI
     @EngineAPI
@@ -128,6 +132,8 @@ open class KtorAutoConfiguration {
 
     @KtorExperimentalLocationsAPI
     private fun Route.mapping(definition: RouteDefinition) {
+        //FIXME
+        val beanMaps = context.getBeansOfType(Filter::class.java)
         val method = definition.method
         val bean = definition.bean
         if (definition.methods.isEmpty()) {
@@ -144,9 +150,15 @@ open class KtorAutoConfiguration {
                         } ?: arrayListOf()
                 route(uri, HttpMethod.parse(requestMethod.name)) {
                     handle {
+                        beanMaps.values.forEach {
+                            it.before(call)
+                        }
                         val model = handlerParam(methodParams)
                         val message = method.invokeSuspend(bean, methodParams.map { it.value }.toTypedArray())
                         handleView(message, definition, model)
+                        beanMaps.values.forEach {
+                            it.after(call)
+                        }
                     }
                 }
             }
