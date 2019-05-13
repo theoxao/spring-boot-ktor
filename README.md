@@ -25,7 +25,7 @@
         <dependency>
             <groupId>com.theoxao</groupId>
             <artifactId>spring-boot-ktor</artifactId>
-            <version>0.1.2-beta</version>
+            <version>0.1.3-alpha</version>
         </dependency>
 ```
 
