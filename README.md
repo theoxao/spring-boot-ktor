@@ -21,6 +21,8 @@
 
 ## next to do
 
+* [ ] support dynamic registry route
+* [ ] multi route for one method
 * [ ] use different parameter resolvers instead of single one
 * [ ] support list/map and genric parameter type
 * [ ] support multi file upload
