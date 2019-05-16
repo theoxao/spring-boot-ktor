@@ -69,15 +69,17 @@ suspend fun PipelineContext<Unit, ApplicationCall>.handlerParam(methodParams: Li
             else -> when {
                 param.fromMultipart -> {
                     val multipart = call.receiveMultipart()
-                    var file: MultipartFile? = null
+                    var value: Any? = null
                     multipart.forEachPart {
+                        if (it is PartData.FormItem && it.name == param.name)
+                            value = it.value
                         it as PartData.FileItem
-                        if (it.name == param.name) {
-                            file = KtorMultipartFile(it)
+                        if (it.name == param.name ) {
+                            value = KtorMultipartFile(it)
                         }
                         it.dispose()
                     }
-                    file
+                    value
                 }
                 param.fromRequestBody -> {
                     call.receiveOrNull(param.type.kotlin)

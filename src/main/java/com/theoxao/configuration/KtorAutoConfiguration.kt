@@ -2,7 +2,7 @@ package com.theoxao.configuration
 
 import com.theoxao.Application
 import com.theoxao.common.RestResponse
-import com.theoxao.resolver.Filter
+import com.theoxao.filter.Filter
 import com.theoxao.util.GsonUtil
 import freemarker.cache.ClassTemplateLoader
 import io.ktor.application.ApplicationCall
@@ -20,6 +20,7 @@ import io.ktor.http.content.static
 import io.ktor.jackson.jackson
 import io.ktor.locations.KtorExperimentalLocationsAPI
 import io.ktor.locations.Locations
+import io.ktor.request.ApplicationRequest
 import io.ktor.response.respond
 import io.ktor.response.respondRedirect
 import io.ktor.routing.Route
@@ -38,6 +39,7 @@ import org.springframework.context.ApplicationContext
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.LocalVariableTableParameterNameDiscoverer
+import org.springframework.core.MethodParameter
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.RequestMapping
@@ -141,6 +143,11 @@ open class KtorAutoConfiguration {
         }
         definition.methods.forEach { requestMethod ->
             definition.uri.forEach { uri ->
+                val list = method.parameters.mapIndexed { index, parameter ->
+                    MethodParameter(method, index)
+                }
+
+                ApplicationRequest
                 val methodParams =
                         discoverer.getParameterNames(method)?.let { paramNames ->
                             method.parameters.mapIndexed { index, it ->
