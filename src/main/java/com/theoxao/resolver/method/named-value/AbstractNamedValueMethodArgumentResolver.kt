@@ -56,6 +56,7 @@ abstract class AbstractNamedValueMethodArgumentResolver : HandlerMethodArgumentR
             arg = resolveStringValue(namedValueInfo.defaultValue)
         }
         //TODO use data binder
+
         return arg
     }
 
@@ -101,6 +102,9 @@ abstract class AbstractNamedValueMethodArgumentResolver : HandlerMethodArgumentR
 
     abstract fun createNamedValueInfo(parameter: MethodParameter): NamedValueInfo
 
+    open fun handleResolvedValue(arg: Any, name: String, parameter: MethodParameter,
+                                 mavContainer: ModelAndViewContainer, request: ApplicationRequest) {
+    }
 
 }
 
