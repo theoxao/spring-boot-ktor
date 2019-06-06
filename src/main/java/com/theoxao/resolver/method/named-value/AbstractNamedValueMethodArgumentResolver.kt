@@ -35,22 +35,28 @@ abstract class AbstractNamedValueMethodArgumentResolver : HandlerMethodArgumentR
     }
 
 
-    override fun resolverArgument(parameter: MethodParameter, mavContainer: ModelAndViewContainer, request: ApplicationRequest, binderFactory: WebDataBinderFactory): Any? {
+    override suspend fun resolverArgument(parameter: MethodParameter, mavContainer: ModelAndViewContainer,
+                                          request: ApplicationRequest, binderFactory: WebDataBinderFactory
+    ): Any? {
         val namedValueInfo = getNamedValueInfo(parameter)
-        val resolvedName = resolverStringValue(namedValueInfo.name)
+        val resolvedName = resolveStringValue(namedValueInfo.name)
+
         resolvedName
                 ?: throw java.lang.IllegalArgumentException("Specified name must not resolve to null: [${namedValueInfo.name}]")
         var arg = resolveName(resolvedName.toString(), parameter, request)
         if (arg == null) {
             if (namedValueInfo.defaultValue != null) {
-                arg = resolverStringValue(namedValueInfo.defaultValue)
+                arg = resolveStringValue(namedValueInfo.defaultValue)
             } else if (namedValueInfo.required) {
                 throw java.lang.IllegalArgumentException("Missing argument '${namedValueInfo.name} ' " +
                         "for method parameter of type ${parameter.nestedParameterType.simpleName}")
             }
             arg = handleNullValue(namedValueInfo.name, arg, parameter.parameterType)
+        } else if ("" == arg && namedValueInfo.defaultValue != null) {
+            arg = resolveStringValue(namedValueInfo.defaultValue)
         }
-        return null
+        //TODO use data binder
+        return arg
     }
 
     private fun handleNullValue(name: String, value: Any?, paramType: Class<*>): Any? {
@@ -62,9 +68,9 @@ abstract class AbstractNamedValueMethodArgumentResolver : HandlerMethodArgumentR
                         "primitive type. Consider declaring it as object wrapper for the corresponding primitive type.")
     }
 
-    abstract fun resolveName(name: String, parameter: MethodParameter, request: ApplicationRequest): Any?
+    abstract suspend fun resolveName(name: String, parameter: MethodParameter, request: ApplicationRequest): Any?
 
-    private fun resolverStringValue(value: String): Any? {
+    private fun resolveStringValue(value: String): Any? {
         this.configurableBeanFactory ?: return value
         val embeddedValue = this.configurableBeanFactory.resolveEmbeddedValue(value)
         val expressionResolver = this.configurableBeanFactory.beanExpressionResolver
@@ -99,4 +105,4 @@ abstract class AbstractNamedValueMethodArgumentResolver : HandlerMethodArgumentR
 }
 
 
-data class NamedValueInfo(val name: String, val required: Boolean = false, val defaultValue: String?)
+open class NamedValueInfo(val name: String, val required: Boolean = false, val defaultValue: String?)

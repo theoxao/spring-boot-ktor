@@ -21,8 +21,8 @@ class PathVariableMapMethodArgumentResolver : HandlerMethodArgumentResolver {
                 && !StringUtils.hasText(ann.value))
     }
 
-    override fun resolverArgument(parameter: MethodParameter, mavContainer: ModelAndViewContainer,
-                                  request: ApplicationRequest, binderFactory: WebDataBinderFactory): Any? {
+    override suspend fun resolverArgument(parameter: MethodParameter, mavContainer: ModelAndViewContainer,
+                                          request: ApplicationRequest, binderFactory: WebDataBinderFactory): Any? {
         //TODO
         return null
     }

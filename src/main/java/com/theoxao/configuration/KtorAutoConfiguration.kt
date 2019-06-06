@@ -146,8 +146,6 @@ open class KtorAutoConfiguration {
                 val list = method.parameters.mapIndexed { index, parameter ->
                     MethodParameter(method, index)
                 }
-
-                ApplicationRequest
                 val methodParams =
                         discoverer.getParameterNames(method)?.let { paramNames ->
                             method.parameters.mapIndexed { index, it ->
