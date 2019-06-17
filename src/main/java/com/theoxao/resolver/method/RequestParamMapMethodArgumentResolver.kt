@@ -23,7 +23,8 @@ class RequestParamMapMethodArgumentResolver : HandlerMethodArgumentResolver {
         return false
     }
 
-    override suspend fun resolverArgument(parameter: MethodParameter, mavContainer: ModelAndViewContainer, request: ApplicationRequest, binderFactory: WebDataBinderFactory): Any? {
+    override suspend fun resolverArgument(parameter: MethodParameter, mavContainer: ModelAndViewContainer?,
+                                          request: ApplicationRequest, binderFactory: WebDataBinderFactory?): Any? {
         val paramType = parameter.parameterType
         val parameters = request.queryParameters.toMap()
         return if (MultiValueMap::class.java.isAssignableFrom(paramType)) {

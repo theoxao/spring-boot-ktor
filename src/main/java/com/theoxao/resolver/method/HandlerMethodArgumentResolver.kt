@@ -15,7 +15,7 @@ interface HandlerMethodArgumentResolver {
     fun supportsParameter(parameter: MethodParameter): Boolean;
 
     suspend fun resolverArgument(
-            parameter: MethodParameter, mavContainer: ModelAndViewContainer,
-            request: ApplicationRequest, binderFactory: WebDataBinderFactory
+            parameter: MethodParameter, mavContainer: ModelAndViewContainer?,
+            request: ApplicationRequest, binderFactory: WebDataBinderFactory?
     ): Any?
 }

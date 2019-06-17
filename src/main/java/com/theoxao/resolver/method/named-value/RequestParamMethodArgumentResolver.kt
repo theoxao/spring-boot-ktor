@@ -1,7 +1,6 @@
 package com.theoxao.resolver.method.`named-value`
 
 import com.theoxao.configuration.KtorMultipartFile
-import io.ktor.http.Cookie
 import io.ktor.http.content.PartData
 import io.ktor.http.content.forEachPart
 import io.ktor.request.ApplicationRequest
@@ -11,8 +10,6 @@ import org.springframework.util.StringUtils
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RequestPart
 import org.springframework.web.bind.annotation.ValueConstants
-import org.springframework.web.multipart.MultipartFile
-import org.springframework.web.multipart.support.MultipartResolutionDelegate
 
 
 /**
@@ -24,7 +21,7 @@ class RequestParamMethodArgumentResolver : AbstractNamedValueMethodArgumentResol
     override suspend fun resolveName(name: String, parameter: MethodParameter, request: ApplicationRequest): Any? {
         var arg: Any? = null
 
-        if (MultipartFile::class.java.isAssignableFrom(parameter.nestedParameterType)) {
+        if (KtorMultipartFile::class.java.isAssignableFrom(parameter.nestedParameterType)) {
             val files: MutableList<KtorMultipartFile> = mutableListOf()
             val multiPartData = request.call.receiveMultipart()
             multiPartData.forEachPart {
@@ -66,7 +63,7 @@ class RequestParamMethodArgumentResolver : AbstractNamedValueMethodArgumentResol
             if (parameter.hasParameterAnnotation(RequestPart::class.java)) {
                 false
             } else
-                MultipartResolutionDelegate.isMultipartArgument(parameter)
+                KtorMultipartFile::class.java.isAssignableFrom(parameter.nestedIfOptional().nestedParameterType)
         }
     }
 

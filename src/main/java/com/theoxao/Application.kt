@@ -10,13 +10,9 @@ import org.springframework.boot.runApplication
  * @date 2019/4/16
  */
 @SpringBootApplication(exclude = [JdbcTemplateAutoConfiguration::class, HibernateJpaAutoConfiguration::class])
-open class Application {
-    companion object {
-        @JvmStatic
-        fun main(args: Array<String>) {
-            runApplication<Application>(*args)
-        }
-    }
-}
+open class Application
 
+fun main(args: Array<String>) {
+    runApplication<Application>(*args)
+}
 

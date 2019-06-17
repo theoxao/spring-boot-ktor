@@ -149,7 +149,7 @@ open class KtorAutoConfiguration {
                 val methodParams =
                         discoverer.getParameterNames(method)?.let { paramNames ->
                             method.parameters.mapIndexed { index, it ->
-                                val param = Param(paramNames[index], it.type, null, it)
+                                val param = Param(paramNames[index], it.type, null, it, method)
                                 param
                             }
                         } ?: arrayListOf()

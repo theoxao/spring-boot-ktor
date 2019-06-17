@@ -35,8 +35,8 @@ abstract class AbstractNamedValueMethodArgumentResolver : HandlerMethodArgumentR
     }
 
 
-    override suspend fun resolverArgument(parameter: MethodParameter, mavContainer: ModelAndViewContainer,
-                                          request: ApplicationRequest, binderFactory: WebDataBinderFactory
+    override suspend fun resolverArgument(parameter: MethodParameter, mavContainer: ModelAndViewContainer?,
+                                          request: ApplicationRequest, binderFactory: WebDataBinderFactory?
     ): Any? {
         val namedValueInfo = getNamedValueInfo(parameter)
         val resolvedName = resolveStringValue(namedValueInfo.name)
