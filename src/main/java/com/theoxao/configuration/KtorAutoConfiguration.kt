@@ -1,5 +1,6 @@
 package com.theoxao.configuration
 
+import com.fasterxml.jackson.core.JsonParser
 import com.theoxao.Application
 import com.theoxao.common.RestResponse
 import com.theoxao.filter.Filter
@@ -80,6 +81,7 @@ open class KtorAutoConfiguration {
         return embeddedServer(engineFactory, properties.port, properties.host) {
             install(ContentNegotiation) {
                 jackson {
+                    this.configure(JsonParser.Feature.AUTO_CLOSE_SOURCE, true);
                 }
             }
             install(Locations)

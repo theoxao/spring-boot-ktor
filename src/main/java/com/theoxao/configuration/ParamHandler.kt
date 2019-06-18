@@ -2,9 +2,7 @@
 
 package com.theoxao.configuration
 
-import com.theoxao.resolver.method.CallArgumentResolver
-import com.theoxao.resolver.method.HandlerMethodArgumentResolver
-import com.theoxao.resolver.method.RequestParamMapMethodArgumentResolver
+import com.theoxao.resolver.method.*
 import com.theoxao.resolver.method.`named-value`.CookieValueMethodArgumentResolver
 import com.theoxao.resolver.method.`named-value`.PathVariableMethodArgumentResolver
 import com.theoxao.resolver.method.`named-value`.RequestHeaderMethodArgumentResolver
@@ -13,6 +11,7 @@ import io.ktor.application.ApplicationCall
 import io.ktor.application.call
 import io.ktor.locations.KtorExperimentalLocationsAPI
 import io.ktor.util.pipeline.PipelineContext
+import org.springframework.core.LocalVariableTableParameterNameDiscoverer
 import org.springframework.core.MethodParameter
 import org.springframework.ui.Model
 import org.springframework.validation.support.BindingAwareConcurrentModel
@@ -23,6 +22,7 @@ import java.lang.reflect.Parameter
 import java.math.BigDecimal
 import java.math.BigInteger
 import kotlin.coroutines.Continuation
+import kotlin.reflect.full.defaultType
 
 /**
  * @author theo
@@ -55,12 +55,15 @@ data class Param(val name: String, val type: Class<*>, var value: Any?, var meth
 
 val argumentResolvers = listOf<HandlerMethodArgumentResolver>(
         RequestParamMapMethodArgumentResolver(),
+        RequestBodyArgumentResolver(false),
         CookieValueMethodArgumentResolver(),
         PathVariableMethodArgumentResolver(),
         RequestHeaderMethodArgumentResolver(),
         RequestParamMethodArgumentResolver(),
         RequestParamMapMethodArgumentResolver(),
-        CallArgumentResolver()
+        CallArgumentResolver(),
+        FinalModelArgumentResolver()
+
 )
 
 //cache me
@@ -80,10 +83,12 @@ suspend fun PipelineContext<Unit, ApplicationCall>.handlerParam(methodParams: Li
             Continuation::class.java -> null
             else -> {
                 val methodParameter = MethodParameter(param.method, index)
+                methodParameter.initParameterNameDiscovery(LocalVariableTableParameterNameDiscoverer())
                 val resolver = getSupportedResolver(methodParameter)
                 resolver?.resolverArgument(methodParameter, null, call.request, null)
             }
         }
+
     }
     return model
 }
