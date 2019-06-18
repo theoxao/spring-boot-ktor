@@ -1,4 +1,4 @@
-package com.theoxao.resolver
+package com.theoxao.filter
 
 import io.ktor.application.ApplicationCall
 

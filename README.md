@@ -19,7 +19,7 @@
 * [ ] handle CQRS  
 * [x] handle response view   freemarker supported
 
-## next to do
+## roadmap
 
 * [ ] support dynamic registry route
 * [ ] multi route for one method
