@@ -21,7 +21,6 @@ import io.ktor.http.content.static
 import io.ktor.jackson.jackson
 import io.ktor.locations.KtorExperimentalLocationsAPI
 import io.ktor.locations.Locations
-import io.ktor.request.ApplicationRequest
 import io.ktor.response.respond
 import io.ktor.response.respondRedirect
 import io.ktor.routing.Route
@@ -39,15 +38,10 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.ApplicationContext
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.core.LocalVariableTableParameterNameDiscoverer
-import org.springframework.core.MethodParameter
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RequestMethod
-import org.springframework.web.bind.annotation.RequestMethod.values
-import org.springframework.web.bind.annotation.ResponseBody
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.*
+import org.springframework.web.bind.annotation.RequestMethod.*
 import java.lang.reflect.Method
 import javax.annotation.Resource
 import kotlin.coroutines.intrinsics.suspendCoroutineUninterceptedOrReturn
@@ -95,12 +89,13 @@ open class KtorAutoConfiguration {
             val beans = context.getBeansWithAnnotation(Controller::class.java).values
 
             val allDefinitions = beans.flatMap { bean ->
-                val mappingAnnotation = bean.javaClass.getDeclaredAnnotation(RequestMapping::class.java)
+                val classMapping = bean.javaClass.getDeclaredAnnotation(RequestMapping::class.java)
                 bean.javaClass.methods.filter {
-                    it.isAnnotationPresent(RequestMapping::class.java)
+                    it.getMappingAnnotation() != null
                 }.map {
-                    val list = it.getDeclaredAnnotation(RequestMapping::class.java).value.flatMap { child ->
-                        mappingAnnotation.value.map { parent ->
+                    val mappingAnnotation = it.getMappingAnnotation()!!
+                    val list = mappingAnnotation.value.flatMap { child ->
+                        classMapping.value.map { parent ->
                             parent + if (child.startsWith("/")) child else "/$child"
                         }
                     }
@@ -132,11 +127,24 @@ open class KtorAutoConfiguration {
         }.start(wait = false)
     }
 
-    private val discoverer = LocalVariableTableParameterNameDiscoverer()
+    private fun Method.getMappingAnnotation(): MappingAnnotation? {
+        return this.getDeclaredAnnotation(RequestMapping::class.java)?.let {
+            MappingAnnotation(it.value, it.method)
+        } ?: this.getDeclaredAnnotation(GetMapping::class.java)?.let {
+            MappingAnnotation(it.value, arrayOf(GET))
+        } ?: this.getDeclaredAnnotation(PutMapping::class.java)?.let {
+            MappingAnnotation(it.value, arrayOf(PUT))
+        } ?: this.getDeclaredAnnotation(PostMapping::class.java)?.let {
+            MappingAnnotation(it.value, arrayOf(POST))
+        } ?: this.getDeclaredAnnotation(DeleteMapping::class.java)?.let {
+            MappingAnnotation(it.value, arrayOf(DELETE))
+        }
+    }
+
+    data class MappingAnnotation(val value: Array<String>, val method: Array<RequestMethod>)
 
     @KtorExperimentalLocationsAPI
     private fun Route.mapping(definition: RouteDefinition) {
-        //FIXME
         val beanMaps = context.getBeansOfType(Filter::class.java)
         val method = definition.method
         val bean = definition.bean
@@ -145,16 +153,10 @@ open class KtorAutoConfiguration {
         }
         definition.methods.forEach { requestMethod ->
             definition.uri.forEach { uri ->
-                val list = method.parameters.mapIndexed { index, parameter ->
-                    MethodParameter(method, index)
-                }
                 val methodParams =
-                        discoverer.getParameterNames(method)?.let { paramNames ->
-                            method.parameters.mapIndexed { index, it ->
-                                val param = Param(paramNames[index], it.type, null, it, method)
-                                param
-                            }
-                        } ?: arrayListOf()
+                        method.parameters.mapIndexed { _, it ->
+                            Param(it.type, null, it, method, requestMethod)
+                        }
                 route(uri, HttpMethod.parse(requestMethod.name)) {
                     handle {
                         beanMaps.values.forEach {
@@ -184,7 +186,7 @@ open class KtorAutoConfiguration {
             when {
                 resultStr.startsWith("redirect:") -> call.respondRedirect(resultStr.removePrefix("redirect:"), true)
                 resultStr.startsWith("static:") -> call.respondRedirect("/${properties.staticRoot}/${resultStr.removePrefix("static:")}")
-                //TODO try other solutions
+                //TODO what was i thinking
                 else -> call.respond(FreeMarkerContent(result, GsonUtil.toMap(GsonUtil.toJson(model!!.asMap()))))
             }
         }

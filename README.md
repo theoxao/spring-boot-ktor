@@ -23,21 +23,29 @@
 
 * [ ] support dynamic registry route
 * [ ] multi route for one method
-* [ ] use different parameter resolvers instead of single one
-* [ ] support list/map and genric parameter type
-* [ ] support multi file upload
-* [ ] support more annotations like GetMapping/PostMapping etc.
+* [x] use different parameter resolvers instead of single one
+* [x] support multi file upload
+* [x] support more annotations like GetMapping/PostMapping etc.
 * [ ] filters or intercepts
 
 ### quick start
 
-* add dependency
+* add repository
+```xml
+    <repositories>
+        <repository>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url>
+        </repository>
+    </repositories>
+```
 
+* add dependency
 ```xml
         <dependency>
             <groupId>com.theoxao</groupId>
             <artifactId>spring-boot-ktor</artifactId>
-            <version>0.1.3-alpha</version>
+            <version>0.2.1-alpha</version>
         </dependency>
 ```
 
@@ -92,6 +100,10 @@ spring:
 @RequestMapping
 @ResponseBody
 @RestController
+@GetMapping
+@PostMapping
+@DeleteMapping
+@PutMapping
 ```
 
 * request and response inject 

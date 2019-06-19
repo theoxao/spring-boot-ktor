@@ -14,6 +14,7 @@ import io.ktor.util.pipeline.PipelineContext
 import org.springframework.core.LocalVariableTableParameterNameDiscoverer
 import org.springframework.core.MethodParameter
 import org.springframework.ui.Model
+import org.springframework.util.Assert
 import org.springframework.validation.support.BindingAwareConcurrentModel
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.multipart.MultipartFile
@@ -22,14 +23,13 @@ import java.lang.reflect.Parameter
 import java.math.BigDecimal
 import java.math.BigInteger
 import kotlin.coroutines.Continuation
-import kotlin.reflect.full.defaultType
 
 /**
  * @author theo
  * @date 2019/4/26
  */
 
-data class Param(val name: String, val type: Class<*>, var value: Any?, var methodParam: Parameter, val method: Method) {
+data class Param(val type: Class<*>, var value: Any?, var methodParam: Parameter, val method: Method, val requestMethod: RequestMethod) {
     var fromRequestBody: Boolean = methodParam.isAnnotationPresent(RequestBody::class.java)
     var fromRequestHead: Boolean = methodParam.isAnnotationPresent(RequestHeader::class.java)
     var fromSession: Boolean = methodParam.isAnnotationPresent(SessionAttribute::class.java) || methodParam.isAnnotationPresent(SessionAttributes::class.java)
@@ -63,7 +63,6 @@ val argumentResolvers = listOf<HandlerMethodArgumentResolver>(
         RequestParamMapMethodArgumentResolver(),
         CallArgumentResolver(),
         FinalModelArgumentResolver()
-
 )
 
 //cache me
@@ -85,10 +84,12 @@ suspend fun PipelineContext<Unit, ApplicationCall>.handlerParam(methodParams: Li
                 val methodParameter = MethodParameter(param.method, index)
                 methodParameter.initParameterNameDiscovery(LocalVariableTableParameterNameDiscoverer())
                 val resolver = getSupportedResolver(methodParameter)
+                if (param.requestMethod == RequestMethod.GET) {
+                    Assert.isTrue(resolver !is RequestBodyArgumentResolver, "request of GET method does not support RequestBody")
+                }
                 resolver?.resolverArgument(methodParameter, null, call.request, null)
             }
         }
-
     }
     return model
 }
