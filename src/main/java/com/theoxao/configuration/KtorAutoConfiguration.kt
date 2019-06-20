@@ -153,16 +153,12 @@ open class KtorAutoConfiguration {
         }
         definition.methods.forEach { requestMethod ->
             definition.uri.forEach { uri ->
-                val methodParams =
-                        method.parameters.mapIndexed { _, it ->
-                            Param(it.type, null, it, method, requestMethod)
-                        }
                 route(uri, HttpMethod.parse(requestMethod.name)) {
                     handle {
                         beanMaps.values.forEach {
                             it.before(call)
                         }
-                        val model = handlerParam(methodParams)
+                        val (model, methodParams) = handlerParam(method)
                         val message = method.invokeSuspend(bean, methodParams.map { it.value }.toTypedArray())
                         handleView(message, definition, model)
                         beanMaps.values.forEach {

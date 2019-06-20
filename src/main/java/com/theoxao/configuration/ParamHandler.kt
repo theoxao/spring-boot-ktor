@@ -29,7 +29,7 @@ import kotlin.coroutines.Continuation
  * @date 2019/4/26
  */
 
-data class Param(val type: Class<*>, var value: Any?, var methodParam: Parameter, val method: Method, val requestMethod: RequestMethod) {
+data class Param(val type: Class<*>, var value: Any?, var methodParam: Parameter, val method: Method) {
     var fromRequestBody: Boolean = methodParam.isAnnotationPresent(RequestBody::class.java)
     var fromRequestHead: Boolean = methodParam.isAnnotationPresent(RequestHeader::class.java)
     var fromSession: Boolean = methodParam.isAnnotationPresent(SessionAttribute::class.java) || methodParam.isAnnotationPresent(SessionAttributes::class.java)
@@ -74,7 +74,11 @@ fun getSupportedResolver(parameter: MethodParameter): HandlerMethodArgumentResol
 }
 
 @KtorExperimentalLocationsAPI
-suspend fun PipelineContext<Unit, ApplicationCall>.handlerParam(methodParams: List<Param>): Model {
+suspend fun PipelineContext<Unit, ApplicationCall>.handlerParam(method: Method): Result {
+    val methodParams =
+            method.parameters.mapIndexed { _, it ->
+                Param(it.type, null, it, method)
+            }
     val model by lazy { BindingAwareConcurrentModel() }
     methodParams.forEachIndexed { index, param ->
         param.value = when (param.methodParam.type) {
@@ -84,12 +88,11 @@ suspend fun PipelineContext<Unit, ApplicationCall>.handlerParam(methodParams: Li
                 val methodParameter = MethodParameter(param.method, index)
                 methodParameter.initParameterNameDiscovery(LocalVariableTableParameterNameDiscoverer())
                 val resolver = getSupportedResolver(methodParameter)
-                if (param.requestMethod == RequestMethod.GET) {
-                    Assert.isTrue(resolver !is RequestBodyArgumentResolver, "request of GET method does not support RequestBody")
-                }
                 resolver?.resolverArgument(methodParameter, null, call.request, null)
             }
         }
     }
-    return model
+    return Result(model, methodParams)
 }
+
+data class Result(val model: BindingAwareConcurrentModel, val params: List<Param>)
