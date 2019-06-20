@@ -11,10 +11,9 @@ import io.ktor.application.ApplicationCall
 import io.ktor.application.call
 import io.ktor.locations.KtorExperimentalLocationsAPI
 import io.ktor.util.pipeline.PipelineContext
-import org.springframework.core.LocalVariableTableParameterNameDiscoverer
 import org.springframework.core.MethodParameter
+import org.springframework.core.ParameterNameDiscoverer
 import org.springframework.ui.Model
-import org.springframework.util.Assert
 import org.springframework.validation.support.BindingAwareConcurrentModel
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.multipart.MultipartFile
@@ -74,7 +73,7 @@ fun getSupportedResolver(parameter: MethodParameter): HandlerMethodArgumentResol
 }
 
 @KtorExperimentalLocationsAPI
-suspend fun PipelineContext<Unit, ApplicationCall>.handlerParam(method: Method): Result {
+suspend fun PipelineContext<Unit, ApplicationCall>.handlerParam(method: Method, parameterNameDiscoverer: ParameterNameDiscoverer): Result {
     val methodParams =
             method.parameters.mapIndexed { _, it ->
                 Param(it.type, null, it, method)
@@ -86,7 +85,7 @@ suspend fun PipelineContext<Unit, ApplicationCall>.handlerParam(method: Method):
             Continuation::class.java -> null
             else -> {
                 val methodParameter = MethodParameter(param.method, index)
-                methodParameter.initParameterNameDiscovery(LocalVariableTableParameterNameDiscoverer())
+                methodParameter.initParameterNameDiscovery(parameterNameDiscoverer)
                 val resolver = getSupportedResolver(methodParameter)
                 resolver?.resolverArgument(methodParameter, null, call.request, null)
             }

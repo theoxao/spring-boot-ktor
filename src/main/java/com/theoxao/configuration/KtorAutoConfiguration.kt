@@ -38,6 +38,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.ApplicationContext
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.core.LocalVariableTableParameterNameDiscoverer
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.*
@@ -145,6 +146,7 @@ open class KtorAutoConfiguration {
 
     @KtorExperimentalLocationsAPI
     private fun Route.mapping(definition: RouteDefinition) {
+        val parameterNameDiscoverer = LocalVariableTableParameterNameDiscoverer()
         val beanMaps = context.getBeansOfType(Filter::class.java)
         val method = definition.method
         val bean = definition.bean
@@ -158,7 +160,7 @@ open class KtorAutoConfiguration {
                         beanMaps.values.forEach {
                             it.before(call)
                         }
-                        val (model, methodParams) = handlerParam(method)
+                        val (model, methodParams) = handlerParam(method, parameterNameDiscoverer)
                         val message = method.invokeSuspend(bean, methodParams.map { it.value }.toTypedArray())
                         handleView(message, definition, model)
                         beanMaps.values.forEach {
