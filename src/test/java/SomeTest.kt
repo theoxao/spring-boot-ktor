@@ -1,3 +1,5 @@
+import com.theoxao.configuration.KtorAutoConfiguration
+import com.theoxao.configuration.signature
 import org.junit.Test
 
 /**
@@ -8,6 +10,8 @@ class SomeTest {
 
     @Test
     fun test() {
-        println()
+        KtorAutoConfiguration::class.java.methods.forEach {
+            println(it.signature())
+        }
     }
 }

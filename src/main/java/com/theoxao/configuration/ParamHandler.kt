@@ -11,6 +11,7 @@ import io.ktor.application.ApplicationCall
 import io.ktor.application.call
 import io.ktor.locations.KtorExperimentalLocationsAPI
 import io.ktor.util.pipeline.PipelineContext
+import org.apache.commons.collections4.map.MultiKeyMap
 import org.springframework.core.MethodParameter
 import org.springframework.core.ParameterNameDiscoverer
 import org.springframework.ui.Model
@@ -31,7 +32,8 @@ import kotlin.coroutines.Continuation
 data class Param(val type: Class<*>, var value: Any?, var methodParam: Parameter, val method: Method) {
     var fromRequestBody: Boolean = methodParam.isAnnotationPresent(RequestBody::class.java)
     var fromRequestHead: Boolean = methodParam.isAnnotationPresent(RequestHeader::class.java)
-    var fromSession: Boolean = methodParam.isAnnotationPresent(SessionAttribute::class.java) || methodParam.isAnnotationPresent(SessionAttributes::class.java)
+    var fromSession: Boolean = methodParam.isAnnotationPresent(SessionAttribute::class.java)
+            || methodParam.isAnnotationPresent(SessionAttributes::class.java)
     var fromCookie: Boolean = methodParam.isAnnotationPresent(CookieValue::class.java)
     var fromMultipart: Boolean = methodParam.type == MultipartFile::class.java
     var isList: Boolean = when (type) {
@@ -61,17 +63,19 @@ val argumentResolvers = listOf<HandlerMethodArgumentResolver>(
         RequestHeaderMethodArgumentResolver(false),
         RequestParamMethodArgumentResolver(),
         RequestParamMapMethodArgumentResolver(),
-        RequestHeaderMethodArgumentResolver(true), //ignore annotation
+        RequestHeaderMethodArgumentResolver(true), //ignore annotation;
         FinalModelArgumentResolver()
 )
 
+val resolverCache: MultiKeyMap<String, HandlerMethodArgumentResolver> = MultiKeyMap()
+
 @KtorExperimentalLocationsAPI
 suspend fun PipelineContext<Unit, ApplicationCall>.handlerParam(method: Method, parameterNameDiscoverer: ParameterNameDiscoverer): Result {
-    val methodParams =
-            method.parameters.mapIndexed { _, it ->
-                Param(it.type, null, it, method)
-            }
+    val methodParams = method.parameters.mapIndexed { _, it ->
+        Param(it.type, null, it, method)
+    }
     val model by lazy { BindingAwareConcurrentModel() }
+    val methodSignature = method.signature()
     methodParams.forEachIndexed { index, param ->
         param.value = when (param.methodParam.type) {
             Model::class.java -> model
@@ -80,14 +84,25 @@ suspend fun PipelineContext<Unit, ApplicationCall>.handlerParam(method: Method, 
                 val methodParameter = MethodParameter(param.method, index)
                 methodParameter.initParameterNameDiscovery(parameterNameDiscoverer)
                 var result: Any? = null
-                for (resolver in argumentResolvers) value@ {
-                    if (resolver.supportsParameter(methodParameter)) {
-                        try {
-                            result = resolver.resolverArgument(methodParameter, null, call.request, null)
-                            result ?: continue
-                            break
-                        } catch (ignore: Exception) {
-                            continue
+                val parameterName = methodParameter.parameterName
+                val cachedResolver = resolverCache.get(methodSignature, parameterName)
+                if (cachedResolver != null) {
+                    try {
+                        result = cachedResolver.resolverArgument(methodParameter, null, call.request, null)
+                    } catch (ignore: Exception) {
+                    }
+                }
+                result?.let {
+                    for (resolver in argumentResolvers) {
+                        if (resolver.supportsParameter(methodParameter)) {
+                            try {
+                                result = resolver.resolverArgument(methodParameter, null, call.request, null)
+                                if (result != null) {
+                                    resolverCache.put(methodSignature, parameterName, resolver)
+                                    break
+                                }
+                            } catch (ignore: Exception) {
+                            }
                         }
                     }
                 }
@@ -97,5 +112,10 @@ suspend fun PipelineContext<Unit, ApplicationCall>.handlerParam(method: Method, 
     }
     return Result(model, methodParams)
 }
+
+fun Method.signature() = this.declaringClass.name +
+        "#${this.name}" +
+        "(${if (this.parameterTypes.isNotEmpty()) this.parameterTypes.map { it.name }.reduce { acc, s -> "$acc,$s" } else ""})"
+//        ":${this.returnType.name}"
 
 data class Result(val model: BindingAwareConcurrentModel, val params: List<Param>)
