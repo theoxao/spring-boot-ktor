@@ -53,24 +53,17 @@ data class Param(val type: Class<*>, var value: Any?, var methodParam: Parameter
 }
 
 val argumentResolvers = listOf<HandlerMethodArgumentResolver>(
+        CallArgumentResolver(),
         RequestParamMapMethodArgumentResolver(),
         RequestBodyArgumentResolver(false),
         CookieValueMethodArgumentResolver(),
         PathVariableMethodArgumentResolver(),
-        RequestHeaderMethodArgumentResolver(),
+        RequestHeaderMethodArgumentResolver(false),
         RequestParamMethodArgumentResolver(),
         RequestParamMapMethodArgumentResolver(),
-        CallArgumentResolver(),
+        RequestHeaderMethodArgumentResolver(true), //ignore annotation
         FinalModelArgumentResolver()
 )
-
-//cache me
-fun getSupportedResolver(parameter: MethodParameter): HandlerMethodArgumentResolver? {
-    for (argumentResolver in argumentResolvers) {
-        if (argumentResolver.supportsParameter(parameter)) return argumentResolver
-    }
-    return null
-}
 
 @KtorExperimentalLocationsAPI
 suspend fun PipelineContext<Unit, ApplicationCall>.handlerParam(method: Method, parameterNameDiscoverer: ParameterNameDiscoverer): Result {
@@ -86,8 +79,19 @@ suspend fun PipelineContext<Unit, ApplicationCall>.handlerParam(method: Method, 
             else -> {
                 val methodParameter = MethodParameter(param.method, index)
                 methodParameter.initParameterNameDiscovery(parameterNameDiscoverer)
-                val resolver = getSupportedResolver(methodParameter)
-                resolver?.resolverArgument(methodParameter, null, call.request, null)
+                var result: Any? = null
+                for (resolver in argumentResolvers) value@ {
+                    if (resolver.supportsParameter(methodParameter)) {
+                        try {
+                            result = resolver.resolverArgument(methodParameter, null, call.request, null)
+                            result ?: continue
+                            break
+                        } catch (ignore: Exception) {
+                            continue
+                        }
+                    }
+                }
+                result
             }
         }
     }
