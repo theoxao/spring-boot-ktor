@@ -92,7 +92,7 @@ suspend fun PipelineContext<Unit, ApplicationCall>.handlerParam(method: Method, 
                     } catch (ignore: Exception) {
                     }
                 }
-                result?.let {
+                if (result == null) {
                     for (resolver in argumentResolvers) {
                         if (resolver.supportsParameter(methodParameter)) {
                             try {
