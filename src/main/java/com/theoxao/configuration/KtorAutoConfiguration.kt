@@ -82,6 +82,9 @@ open class KtorAutoConfiguration {
             install(Locations)
             install(Sessions)
             install(PartialContent)
+            install(CORS){
+                anyHost()
+            }
             if (Class.forName("io.ktor.freemarker.FreeMarker") != null)
                 install(FreeMarker) {
                     templateLoader = ClassTemplateLoader(Application::class.java, "/${properties.templatesRoot}")
