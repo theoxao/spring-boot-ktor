@@ -62,8 +62,8 @@ val argumentResolvers = listOf<HandlerMethodArgumentResolver>(
         PathVariableMethodArgumentResolver(),
         RequestHeaderMethodArgumentResolver(false),
         RequestParamMethodArgumentResolver(),
-        RequestParamMapMethodArgumentResolver(),
         RequestHeaderMethodArgumentResolver(true), //ignore annotation;
+        RequestBodyArgumentResolver(true),
         FinalModelArgumentResolver()
 )
 
