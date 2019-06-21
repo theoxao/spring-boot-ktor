@@ -9,6 +9,7 @@ import freemarker.cache.ClassTemplateLoader
 import io.ktor.application.ApplicationCall
 import io.ktor.application.call
 import io.ktor.application.install
+import io.ktor.features.CORS
 import io.ktor.features.ContentNegotiation
 import io.ktor.features.PartialContent
 import io.ktor.features.StatusPages
