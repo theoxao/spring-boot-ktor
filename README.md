@@ -21,8 +21,6 @@
 
 ## roadmap
 
-* [ ] support dynamic registry route
-* [ ] multi route for one method
 * [x] use different parameter resolvers instead of single one
 * [x] support multi file upload
 * [x] support more annotations like GetMapping/PostMapping etc.
