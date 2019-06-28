@@ -4,25 +4,26 @@
 
 ![version](https://img.shields.io/jitpack/v/github/theoxao/spring-boot-ktor.svg?label=jitpack&style=flat-square)
 
-* [x] route registry  
-* [x] parameter receive
-* [x] support suspend functions  
-* [x] support java class route 
-* [x] suport request header / cookie value
-* [x] support response redirect  
-* [x] support static resource  
-* [x] file upload(support multipart file) and download (inject ApplicationResponse)
-* [x] handle response view   freemarker supported
-* [x] use different parameter resolvers instead of single one
-* [x] support multi file upload
-* [x] support more annotations like GetMapping/PostMapping etc.
+* [x] 路由注册
+* [x] 参数接收
+* [x] 参数处理
+* [x] 支持suspend (kotlin)  
+* [x] 支持声明式路由
+* [x] 支持请求头/Cookie获取参数
+* [x] 支持重定向 
+* [x] 支持静态资源映射
+* [x] 文件上传下载
+* [x] freemarker
+* [x] 仿MVC参数解析器组
+* [x] 多文件上传
+* [x] 支持更多的spring-web注解
 
 ## roadmap
 
-* [ ] support dynamic registry route
-* [ ] filters or intercepts
-* [ ] handle exception  
-* [ ] handle CQRS  
+* [ ] 动态路由注册
+* [ ] 自定义过滤器/拦截器
+* [ ] 自定义CQRS  
+* [ ] 自定义异常处理 
 
 ### quick start
 
@@ -45,7 +46,7 @@
         </dependency>
 ```
 
-* controller(kotlin)
+* kotlin Controller代码
   
 ```kotlin
 @RestController
@@ -58,7 +59,7 @@ class OCRController(private val ocrService: OCRService) {
 }
 ```
 
-* same with java code (of course, no suspend)
+* java Controller层代码
   
 ```java
 @RestController
@@ -74,7 +75,7 @@ public class OCRJavaController {
 }
 ```
 
-* configuration
+* 自定义配置
   
 ```yaml
 spring:
@@ -86,7 +87,7 @@ spring:
     templatesRoot: "templates"
 ```
 
-* supported spring-web annotaiton
+* 支持的spring web注解
   
 ```java
 @Controller
@@ -102,7 +103,7 @@ spring:
 @PutMapping
 ```
 
-* request and response inject 
+* request和response 改用ktor中的ApplicationRequest/ApplicationResponse
   
 ```kotlin
 fun base64(request:ApplicationRequest,response:ApplicationResponse): String ...
