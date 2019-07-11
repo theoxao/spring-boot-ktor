@@ -2,7 +2,6 @@ package com.theoxao.configuration
 
 import com.fasterxml.jackson.core.JsonParser
 import com.theoxao.Application
-import com.theoxao.common.RestResponse
 import com.theoxao.filter.Filter
 import com.theoxao.util.GsonUtil
 import freemarker.cache.ClassTemplateLoader
@@ -116,8 +115,7 @@ open class KtorAutoConfiguration {
                 install(StatusPages) {
                     exception<Throwable> { e ->
                         e.printStackTrace()
-                        call.respond(HttpStatusCode.InternalServerError, RestResponse.error<String>(e.localizedMessage
-                                ?: "Unknown Exception"))
+                        call.respond("Unknown Exception")
                     }
                 }
                 static("/${properties.staticRoot}") {
