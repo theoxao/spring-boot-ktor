@@ -45,8 +45,9 @@
         </dependency>
         <dependency>
             <groupId>io.ktor</groupId>
-            <artifactId>ktor-jackson</artifactId>
+            <artifactId>ktor-gson</artifactId>
             <version>${ktor.version}</version>
+            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>io.ktor</groupId>
