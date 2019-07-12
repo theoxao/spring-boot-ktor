@@ -1,9 +1,5 @@
 package com.theoxao.configuration
 
-import com.fasterxml.jackson.core.JsonGenerator
-import com.fasterxml.jackson.core.JsonParser
-import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.databind.SerializationFeature
 import com.theoxao.Application
 import com.theoxao.filter.Filter
 import com.theoxao.util.GsonUtil
@@ -17,11 +13,10 @@ import io.ktor.features.PartialContent
 import io.ktor.features.StatusPages
 import io.ktor.freemarker.FreeMarker
 import io.ktor.freemarker.FreeMarkerContent
+import io.ktor.gson.gson
 import io.ktor.http.HttpMethod
-import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.resources
 import io.ktor.http.content.static
-import io.ktor.jackson.jackson
 import io.ktor.locations.KtorExperimentalLocationsAPI
 import io.ktor.locations.Locations
 import io.ktor.response.respond
@@ -78,12 +73,8 @@ open class KtorAutoConfiguration {
 
         return embeddedServer(engineFactory, properties.port, properties.host) {
             install(ContentNegotiation) {
-                jackson {
-                    enable(JsonParser.Feature.AUTO_CLOSE_SOURCE);
-                    enable(SerializationFeature.INDENT_OUTPUT)
-                    enable(JsonGenerator.Feature.IGNORE_UNKNOWN)
-                    enable(JsonParser.Feature.IGNORE_UNDEFINED)
-                    disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                gson {
+
                 }
             }
             install(Locations)
